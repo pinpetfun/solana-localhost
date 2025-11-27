@@ -1,13 +1,23 @@
 # Port Mapper Configuration
 
-[proxy]
-# Local listening address and port
+# Multiple proxy mappings configuration
+[[proxies]]
+# RPC Port (HTTP)
+name = "solana-rpc"
 listen_addr = "127.0.0.1"
 listen_port = 8899
-
-# Target server address and port
 target_addr = "47.109.157.92"
 target_port = 8899
+enable_websocket = false
+
+[[proxies]]
+# WebSocket Port
+name = "solana-ws"
+listen_addr = "127.0.0.1"
+listen_port = 8900
+target_addr = "47.109.157.92"
+target_port = 8900
+enable_websocket = true
 
 [logging]
 # Log level: trace, debug, info, warn, error
