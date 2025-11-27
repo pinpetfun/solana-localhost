@@ -6,7 +6,7 @@
 
 ## 下载
 
-下载最新版本：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7)
+下载最新版本：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.8](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.8)
 
 选择适合你系统的版本：
 - **Windows**: `solana-localhost-windows-x64.zip`
