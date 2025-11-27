@@ -6,7 +6,7 @@ Forward local port 8899 to remote Solana node (47.109.157.92:8899), allowing you
 
 ## Download
 
-Download the latest release: [https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.8](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.8)
+Download the latest release
 
 Choose the version for your system:
 - **Windows**: `solana-localhost-windows-x64.zip`

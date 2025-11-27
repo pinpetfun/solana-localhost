@@ -6,7 +6,7 @@
 
 ## ダウンロード
 
-最新リリースをダウンロード：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.8](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.8)
+最新リリースをダウンロード
 
 お使いのシステムに合うバージョンを選択してください：
 - **Windows**: `solana-localhost-windows-x64.zip`
