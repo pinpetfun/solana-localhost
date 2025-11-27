@@ -1,6 +1,6 @@
 # Solana Localhost Proxy
 
-**English** | [å,ž](./README_JP.md) | [-‡](./README_CN.md)
+**English** | [æ—¥æœ¬èªž](./README_JP.md) | [ä¸­æ–‡](./README_CN.md)
 
 Forward local port 8899 to remote Solana node (47.109.157.92:8899), allowing you to connect Phantom wallet to a local node.
 
@@ -61,7 +61,7 @@ solana-localhost-windows-x64.exe
 ### 4. Configure Phantom Wallet
 
 1. Open Phantom wallet
-2. Go to Settings ’ Developer Settings
+2. Go to Settings ï¿½ Developer Settings
 3. Set RPC node to `http://localhost:8899`
 4. Your Phantom wallet is now connected to the local node
 
