@@ -6,7 +6,7 @@
 
 ## 下载
 
-下载最新版本：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.6](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.6)
+下载最新版本：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7)
 
 选择适合你系统的版本：
 - **Windows**: `solana-localhost-windows-x64.zip`
@@ -21,12 +21,28 @@
 
 **Windows:**
 ```bash
-# 解压 zip 文件
+# 解压 zip 文件（使用 Windows 内置解压或任何解压工具）
+# 右键点击 solana-localhost-windows-x64.zip 选择"全部解压"
 ```
 
-**macOS/Linux:**
+**macOS Intel:**
 ```bash
-tar -xzf solana-localhost-*.tar.gz
+tar -xzf solana-localhost-macos-x64.tar.gz
+```
+
+**macOS Apple Silicon (M1/M2/M3):**
+```bash
+tar -xzf solana-localhost-macos-arm64.tar.gz
+```
+
+**Linux x64:**
+```bash
+tar -xzf solana-localhost-linux-x64.tar.gz
+```
+
+**Linux ARM64:**
+```bash
+tar -xzf solana-localhost-linux-arm64.tar.gz
 ```
 
 ### 2. 修改配置（可选）

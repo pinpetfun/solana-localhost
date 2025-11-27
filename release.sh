@@ -175,7 +175,8 @@ build_all() {
 1. 编辑 `config.toml` 配置文件
 2. 运行程序:
    ```bash
-   ./solana-localhost-macos-x64  # macOS
+   ./solana-localhost-macos-x64   # macOS Intel
+   ./solana-localhost-macos-arm64  # macOS Apple Silicon (M1/M2/M3)
    ```
 
 ## 配置说明
@@ -322,9 +323,8 @@ READMEEOF
 1. 编辑 `config.toml` 配置文件
 2. 运行程序:
    ```bash
-   ./solana-localhost-macos-x64  # macOS Intel
-   # 或
-   ./solana-localhost-macos-arm64 # macOS Apple Silicon
+   ./solana-localhost-macos-x64   # macOS Intel
+   ./solana-localhost-macos-arm64  # macOS Apple Silicon (M1/M2/M3)
    ```
 
 ## 配置说明

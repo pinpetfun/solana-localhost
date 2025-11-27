@@ -6,7 +6,7 @@
 
 ## ダウンロード
 
-最新リリースをダウンロード：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.6](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.6)
+最新リリースをダウンロード：[https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7)
 
 お使いのシステムに合うバージョンを選択してください：
 - **Windows**: `solana-localhost-windows-x64.zip`
@@ -21,12 +21,28 @@
 
 **Windows:**
 ```bash
-# zipファイルを展開
+# zipファイルを展開（Windows内蔵の展開機能または任意の解凍ツールを使用）
+# solana-localhost-windows-x64.zip を右クリックして「すべて展開」を選択
 ```
 
-**macOS/Linux:**
+**macOS Intel:**
 ```bash
-tar -xzf solana-localhost-*.tar.gz
+tar -xzf solana-localhost-macos-x64.tar.gz
+```
+
+**macOS Apple Silicon (M1/M2/M3):**
+```bash
+tar -xzf solana-localhost-macos-arm64.tar.gz
+```
+
+**Linux x64:**
+```bash
+tar -xzf solana-localhost-linux-x64.tar.gz
+```
+
+**Linux ARM64:**
+```bash
+tar -xzf solana-localhost-linux-arm64.tar.gz
 ```
 
 ### 2. 設定の変更（オプション）

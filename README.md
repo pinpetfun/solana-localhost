@@ -6,7 +6,7 @@ Forward local port 8899 to remote Solana node (47.109.157.92:8899), allowing you
 
 ## Download
 
-Download the latest release: [https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.6](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.6)
+Download the latest release: [https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7](https://github.com/pinpetfun/solana-localhost/releases/tag/v1.0.7)
 
 Choose the version for your system:
 - **Windows**: `solana-localhost-windows-x64.zip`
@@ -21,12 +21,28 @@ Choose the version for your system:
 
 **Windows:**
 ```bash
-# Extract the zip file
+# Extract the zip file (use built-in Windows extraction or any unzip tool)
+# Right-click on solana-localhost-windows-x64.zip and select "Extract All"
 ```
 
-**macOS/Linux:**
+**macOS Intel:**
 ```bash
-tar -xzf solana-localhost-*.tar.gz
+tar -xzf solana-localhost-macos-x64.tar.gz
+```
+
+**macOS Apple Silicon (M1/M2/M3):**
+```bash
+tar -xzf solana-localhost-macos-arm64.tar.gz
+```
+
+**Linux x64:**
+```bash
+tar -xzf solana-localhost-linux-x64.tar.gz
+```
+
+**Linux ARM64:**
+```bash
+tar -xzf solana-localhost-linux-arm64.tar.gz
 ```
 
 ### 2. Modify Configuration (Optional)

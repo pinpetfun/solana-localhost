@@ -40,6 +40,43 @@ impl Config {
         Ok(config)
     }
 
+    fn default() -> Self {
+        Config {
+            proxy: ProxyConfig {
+                listen_addr: String::from("127.0.0.1"),
+                listen_port: 8899,
+                target_addr: String::from("47.109.157.92"),
+                target_port: 8899,
+            },
+            logging: LoggingConfig {
+                level: String::from("info"),
+            },
+        }
+    }
+
+    fn from_file_or_default(path: &str) -> Self {
+        match std::fs::read_to_string(path) {
+            Ok(content) => {
+                match toml::from_str::<Config>(&content) {
+                    Ok(config) => {
+                        println!("Configuration loaded from {}", path);
+                        config
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to parse config file {}: {}. Using default configuration.", path, e);
+                        Self::default()
+                    }
+                }
+            }
+            Err(_) => {
+                println!("Config file {} not found. Using default configuration:", path);
+                println!("  Listen: 127.0.0.1:8899");
+                println!("  Target: 47.109.157.92:8899");
+                Self::default()
+            }
+        }
+    }
+
     fn listen_addr(&self) -> String {
         format!("{}:{}", self.proxy.listen_addr, self.proxy.listen_port)
     }
@@ -121,8 +158,8 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Load configuration
-    let config = Config::from_file("config.toml").context("Failed to load configuration")?;
+    // Load configuration (use default if config.toml not found)
+    let config = Config::from_file_or_default("config.toml");
 
     // Initialize tracing
     tracing_subscriber::fmt()
