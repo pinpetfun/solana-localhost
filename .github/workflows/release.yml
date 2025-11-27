@@ -1,0 +1,257 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # 触发条件：推送符合 v*.*.* 格式的 tag
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # macOS Intel
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive: tar.gz
+
+          # macOS Apple Silicon
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+
+          # Linux x86_64 (使用 zigbuild 在 macOS 上构建)
+          - os: macos-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+            use_zigbuild: true
+
+          # Linux ARM64 (使用 zigbuild 在 macOS 上构建)
+          - os: macos-latest
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+            use_zigbuild: true
+
+          # Windows
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Zig and cargo-zigbuild (for Linux builds on macOS)
+        if: matrix.use_zigbuild == true
+        run: |
+          brew install zig
+          cargo install cargo-zigbuild
+
+      - name: Create default config.toml if not exists
+        run: |
+          if [ ! -f config.toml ]; then
+            cat > config.toml << 'EOF'
+          [proxy]
+          # 监听地址和端口
+          listen_host = "127.0.0.1"
+          listen_port = 8899
+
+          # 目标服务器地址和端口
+          target_host = "api.mainnet-beta.solana.com"
+          target_port = 443
+
+          [logging]
+          # 日志级别：trace, debug, info, warn, error
+          level = "info"
+          EOF
+          fi
+        shell: bash
+
+      - name: Build
+        run: |
+          if [ "${{ matrix.use_zigbuild }}" == "true" ]; then
+            cargo zigbuild --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+        shell: bash
+
+      - name: Package (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          # 创建临时目录
+          mkdir -p package
+
+          # 复制可执行文件和配置文件
+          cp target/${{ matrix.target }}/release/solana-localhost package/
+          cp config.toml package/
+
+          # 创建 README
+          cat > package/README.md << 'EOF'
+          # Solana Localhost Proxy
+
+          ## 快速开始
+
+          1. 编辑 `config.toml` 配置文件（如需要）
+          2. 运行程序：
+             ```bash
+             ./solana-localhost
+             ```
+
+          ## 配置说明
+
+          请查看 `config.toml` 文件中的注释了解各配置项的含义。
+
+          EOF
+
+          # 打包
+          cd package
+          tar czf ../solana-localhost-${{ matrix.target }}.tar.gz *
+          cd ..
+          echo "ASSET=solana-localhost-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          # 创建临时目录
+          New-Item -ItemType Directory -Force -Path package
+
+          # 复制可执行文件和配置文件
+          Copy-Item target/${{ matrix.target }}/release/solana-localhost.exe package/
+          Copy-Item config.toml package/
+
+          # 创建 README
+          @"
+          # Solana Localhost Proxy
+
+          ## 快速开始
+
+          1. 编辑 config.toml 配置文件（如需要）
+          2. 运行程序：
+             ``````
+             solana-localhost.exe
+             ``````
+
+          ## 配置说明
+
+          请查看 config.toml 文件中的注释了解各配置项的含义。
+          "@ | Out-File -FilePath package/README.md -Encoding UTF8
+
+          # 打包
+          cd package
+          7z a ../solana-localhost-${{ matrix.target }}.zip *
+          cd ..
+          echo "ASSET=solana-localhost-${{ matrix.target }}.zip" >> $env:GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: solana-localhost-${{ matrix.target }}
+          path: ${{ env.ASSET }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./artifacts
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 获取最新两个 tag 之间的提交记录
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" ${PREV_TAG}..HEAD)
+          fi
+
+          # 将换行符转换为 GitHub Actions 可以处理的格式
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+
+          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: ./artifacts/**/solana-localhost-*
+          body: |
+            ## 📋 更新内容
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## 📦 下载说明
+
+            每个发布包都包含：
+            - 可执行文件（`solana-localhost` 或 `solana-localhost.exe`）
+            - 配置文件（`config.toml`）
+            - 说明文档（`README.md`）
+
+            ### macOS
+            - Intel: `solana-localhost-x86_64-apple-darwin.tar.gz`
+            - Apple Silicon: `solana-localhost-aarch64-apple-darwin.tar.gz`
+
+            ### Linux
+            - x86_64: `solana-localhost-x86_64-unknown-linux-gnu.tar.gz`
+            - ARM64: `solana-localhost-aarch64-unknown-linux-gnu.tar.gz`
+
+            ### Windows
+            - x86_64: `solana-localhost-x86_64-pc-windows-msvc.zip`
+
+            ### 使用方法
+
+            **macOS/Linux:**
+            ```bash
+            # 解压
+            tar -xzf solana-localhost-*.tar.gz
+
+            # 添加执行权限（如需要）
+            chmod +x solana-localhost
+
+            # 编辑配置（可选）
+            vi config.toml
+
+            # 运行
+            ./solana-localhost
+            ```
+
+            **Windows:**
+            ```powershell
+            # 解压 (PowerShell)
+            Expand-Archive solana-localhost-*.zip -DestinationPath .
+
+            # 编辑配置（可选）
+            notepad config.toml
+
+            # 运行
+            .\solana-localhost.exe
+            ```
+
+            ## ⚙️ 配置说明
+
+            程序使用 `config.toml` 文件进行配置。默认配置将本地 8899 端口代理到 Solana 主网 RPC。
+
+            ---
+            *使用 Zig 交叉编译技术构建，无需 Docker*
