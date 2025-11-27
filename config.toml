@@ -19,6 +19,15 @@ target_addr = "47.109.157.92"
 target_port = 8900
 enable_websocket = true
 
+[[proxies]]
+# Additional Service Port
+name = "service-3000"
+listen_addr = "127.0.0.1"
+listen_port = 3000
+target_addr = "47.109.157.92"
+target_port = 3000
+enable_websocket = false
+
 [logging]
 # Log level: trace, debug, info, warn, error
 level = "info"

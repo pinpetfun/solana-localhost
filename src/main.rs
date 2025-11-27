@@ -1,20 +1,19 @@
 use anyhow::{Context, Result};
-use futures_util::{SinkExt, StreamExt};
 use http_body_util::{combinators::BoxBody, BodyExt, Full};
 use hyper::body::Bytes;
-use hyper::header::{CONNECTION, UPGRADE};
+use hyper::header::{HeaderValue, CONNECTION, HOST, UPGRADE};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::upgrade::Upgraded;
-use hyper::{Request, Response, StatusCode};
+use hyper::{Request, Response, StatusCode, Uri};
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
-use tracing::{error, info, debug};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
+use tracing::{debug, error, info};
 
 #[derive(Debug, Deserialize)]
 struct Config {
@@ -66,6 +65,14 @@ impl Config {
                     target_port: 8900,
                     enable_websocket: true,
                 },
+                ProxyConfig {
+                    name: String::from("service-3000"),
+                    listen_addr: String::from("127.0.0.1"),
+                    listen_port: 3000,
+                    target_addr: String::from("47.109.157.92"),
+                    target_port: 3000,
+                    enable_websocket: false,
+                },
             ],
             logging: LoggingConfig {
                 level: String::from("info"),
@@ -91,6 +98,7 @@ impl Config {
                 println!("Config file {} not found. Using default configuration:", path);
                 println!("  RPC: 127.0.0.1:8899 -> 47.109.157.92:8899");
                 println!("  WebSocket: 127.0.0.1:8900 -> 47.109.157.92:8900");
+                println!("  Service: 127.0.0.1:3000 -> 47.109.157.92:3000");
                 Self::default()
             }
         }
@@ -106,9 +114,6 @@ impl ProxyConfig {
         format!("http://{}:{}", self.target_addr, self.target_port)
     }
 
-    fn target_ws_url(&self) -> String {
-        format!("ws://{}:{}", self.target_addr, self.target_port)
-    }
 }
 
 #[derive(Clone)]
@@ -133,97 +138,141 @@ fn is_websocket_upgrade(req: &Request<hyper::body::Incoming>) -> bool {
 }
 
 async fn handle_websocket_upgrade(
-    req: Request<hyper::body::Incoming>,
+    mut req: Request<hyper::body::Incoming>,
     state: ProxyState,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
     let path = req.uri().path();
-    let query = req.uri().query().unwrap_or("");
+    let query = req.uri().query();
 
-    info!("[{}] WebSocket upgrade request: {} {}",
+    info!(
+        "[{}] WebSocket upgrade request: {}{}",
         state.config.name,
         path,
-        if query.is_empty() { "" } else { query }
+        query.map(|q| format!("?{}", q)).unwrap_or_default()
     );
 
-    // Build target WebSocket URL
-    let target_url = if query.is_empty() {
-        format!("{}{}", state.config.target_ws_url(), path)
+    // Build target URL for HTTP request
+    let target_url = if let Some(q) = query {
+        format!("{}{}?{}", state.config.target_url(), path, q)
     } else {
-        format!("{}{}?{}", state.config.target_ws_url(), path, query)
+        format!("{}{}", state.config.target_url(), path)
     };
 
-    // Get upgrade handler for the client connection
-    let on_upgrade = hyper::upgrade::on(req);
-
-    // Return switching protocols response
-    let response = Response::builder()
-        .status(StatusCode::SWITCHING_PROTOCOLS)
-        .header(CONNECTION, "Upgrade")
-        .header(UPGRADE, "websocket")
-        .body(empty_body())
-        .unwrap();
-
-    // Spawn task to handle the WebSocket proxy
-    tokio::spawn(async move {
-        match on_upgrade.await {
-            Ok(upgraded) => {
-                if let Err(e) = proxy_websocket(upgraded, target_url, state.config.name.clone()).await {
-                    error!("[{}] WebSocket proxy error: {}", state.config.name, e);
-                }
-            }
-            Err(e) => {
-                error!("[{}] Failed to upgrade connection: {}", state.config.name, e);
-            }
+    // Parse target URI
+    let target_uri: Uri = match target_url.parse() {
+        Ok(uri) => uri,
+        Err(e) => {
+            error!("[{}] Invalid target URI: {}", state.config.name, e);
+            return Ok(Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(full("Invalid target URI"))
+                .unwrap());
         }
-    });
+    };
 
-    Ok(response)
+    // Get the client's upgrade handle before we modify the request
+    let on_upgrade_client = hyper::upgrade::on(&mut req);
+
+    // Update the request URI and Host header for target server
+    *req.uri_mut() = target_uri;
+    req.headers_mut().insert(
+        HOST,
+        HeaderValue::from_str(&format!("{}:{}", state.config.target_addr, state.config.target_port))
+            .unwrap_or_else(|_| HeaderValue::from_static("localhost")),
+    );
+
+    // Forward the WebSocket upgrade request to the target server
+    debug!(
+        "[{}] Forwarding WebSocket upgrade to target server",
+        state.config.name
+    );
+
+    match state.client.request(req.map(|body| body.boxed())).await {
+        Ok(mut response) => {
+            let status = response.status();
+            info!(
+                "[{}] Target server responded with status: {}",
+                state.config.name, status
+            );
+
+            if status == StatusCode::SWITCHING_PROTOCOLS {
+                // Get the upgrade handle from the target's response
+                let on_upgrade_target = hyper::upgrade::on(&mut response);
+
+                // Spawn task to proxy between client and target after both upgrades complete
+                let proxy_name = state.config.name.clone();
+                tokio::spawn(async move {
+                    debug!("[{}] Waiting for both WebSocket upgrades to complete", proxy_name);
+
+                    // Wait for both upgrades to complete
+                    let (client_result, target_result) = tokio::join!(
+                        on_upgrade_client,
+                        on_upgrade_target
+                    );
+
+                    match (client_result, target_result) {
+                        (Ok(client_upgraded), Ok(target_upgraded)) => {
+                            info!("[{}] Both WebSocket upgrades completed, starting bidirectional proxy", proxy_name);
+                            if let Err(e) = proxy_bidirectional(client_upgraded, target_upgraded, proxy_name.clone()).await {
+                                error!("[{}] WebSocket proxy error: {}", proxy_name, e);
+                            }
+                        }
+                        (Err(e), _) => {
+                            error!("[{}] Failed to upgrade client connection: {}", proxy_name, e);
+                        }
+                        (_, Err(e)) => {
+                            error!("[{}] Failed to upgrade target connection: {}", proxy_name, e);
+                        }
+                    }
+                });
+            }
+
+            // Return the response from the target server to the client
+            Ok(response.map(|body| body.boxed()))
+        }
+        Err(e) => {
+            error!("[{}] Failed to forward WebSocket upgrade: {}", state.config.name, e);
+            Ok(Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(full(format!("Failed to connect to target server: {}", e)))
+                .unwrap())
+        }
+    }
 }
 
-async fn proxy_websocket(
-    upgraded: Upgraded,
-    target_url: String,
+// Proxy raw bytes bidirectionally between client and target
+async fn proxy_bidirectional(
+    client: Upgraded,
+    target: Upgraded,
     proxy_name: String,
 ) -> Result<()> {
-    debug!("[{}] Connecting to target WebSocket: {}", proxy_name, target_url);
+    let client = TokioIo::new(client);
+    let target = TokioIo::new(target);
 
-    // Connect to target WebSocket server
-    let (target_ws, _) = connect_async(&target_url).await
-        .with_context(|| format!("Failed to connect to target WebSocket: {}", target_url))?;
-
-    info!("[{}] WebSocket connection established to {}", proxy_name, target_url);
-
-    // Convert the upgraded connection to WebSocket
-    let client_ws = WebSocketStream::from_raw_socket(
-        TokioIo::new(upgraded),
-        tokio_tungstenite::tungstenite::protocol::Role::Server,
-        None,
-    ).await;
-
-    // Proxy messages between client and target
-    proxy_ws_messages(client_ws, target_ws, proxy_name).await
-}
-
-async fn proxy_ws_messages(
-    client_ws: WebSocketStream<TokioIo<Upgraded>>,
-    target_ws: WebSocketStream<MaybeTlsStream<TcpStream>>,
-    proxy_name: String,
-) -> Result<()> {
-    let (mut client_sink, mut client_stream) = client_ws.split();
-    let (mut target_sink, mut target_stream) = target_ws.split();
+    let (mut client_read, mut client_write) = tokio::io::split(client);
+    let (mut target_read, mut target_write) = tokio::io::split(target);
 
     let client_to_target = async {
-        while let Some(msg) = client_stream.next().await {
-            match msg {
-                Ok(msg) => {
-                    debug!("[{}] Client -> Target: {:?}", proxy_name, msg);
-                    if let Err(e) = target_sink.send(msg).await {
-                        error!("[{}] Failed to send to target: {}", proxy_name, e);
+        let mut buffer = vec![0u8; 8192];
+        loop {
+            match client_read.read(&mut buffer).await {
+                Ok(0) => {
+                    debug!("[{}] Client connection closed", proxy_name);
+                    break;
+                }
+                Ok(n) => {
+                    debug!("[{}] Client -> Target: {} bytes", proxy_name, n);
+                    if let Err(e) = target_write.write_all(&buffer[..n]).await {
+                        error!("[{}] Failed to write to target: {}", proxy_name, e);
+                        break;
+                    }
+                    if let Err(e) = target_write.flush().await {
+                        error!("[{}] Failed to flush target: {}", proxy_name, e);
                         break;
                     }
                 }
                 Err(e) => {
-                    error!("[{}] Error receiving from client: {}", proxy_name, e);
+                    error!("[{}] Failed to read from client: {}", proxy_name, e);
                     break;
                 }
             }
@@ -231,17 +280,26 @@ async fn proxy_ws_messages(
     };
 
     let target_to_client = async {
-        while let Some(msg) = target_stream.next().await {
-            match msg {
-                Ok(msg) => {
-                    debug!("[{}] Target -> Client: {:?}", proxy_name, msg);
-                    if let Err(e) = client_sink.send(msg).await {
-                        error!("[{}] Failed to send to client: {}", proxy_name, e);
+        let mut buffer = vec![0u8; 8192];
+        loop {
+            match target_read.read(&mut buffer).await {
+                Ok(0) => {
+                    debug!("[{}] Target connection closed", proxy_name);
+                    break;
+                }
+                Ok(n) => {
+                    debug!("[{}] Target -> Client: {} bytes", proxy_name, n);
+                    if let Err(e) = client_write.write_all(&buffer[..n]).await {
+                        error!("[{}] Failed to write to client: {}", proxy_name, e);
+                        break;
+                    }
+                    if let Err(e) = client_write.flush().await {
+                        error!("[{}] Failed to flush client: {}", proxy_name, e);
                         break;
                     }
                 }
                 Err(e) => {
-                    error!("[{}] Error receiving from target: {}", proxy_name, e);
+                    error!("[{}] Failed to read from target: {}", proxy_name, e);
                     break;
                 }
             }
@@ -251,16 +309,17 @@ async fn proxy_ws_messages(
     // Run both directions concurrently
     tokio::select! {
         _ = client_to_target => {
-            debug!("[{}] Client to target stream ended", proxy_name);
+            info!("[{}] Client to target stream ended", proxy_name);
         }
         _ = target_to_client => {
-            debug!("[{}] Target to client stream ended", proxy_name);
+            info!("[{}] Target to client stream ended", proxy_name);
         }
     }
 
     info!("[{}] WebSocket connection closed", proxy_name);
     Ok(())
 }
+
 
 async fn proxy_handler(
     mut req: Request<hyper::body::Incoming>,
@@ -328,12 +387,6 @@ async fn proxy_handler(
 
 fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
     Full::new(chunk.into())
-        .map_err(|never| match never {})
-        .boxed()
-}
-
-fn empty_body() -> BoxBody<Bytes, hyper::Error> {
-    Full::new(Bytes::new())
         .map_err(|never| match never {})
         .boxed()
 }
