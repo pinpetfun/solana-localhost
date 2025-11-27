@@ -80,12 +80,12 @@ create_default_config() {
     cat > config.toml << 'EOF'
 [proxy]
 # 监听地址和端口
-listen_host = "127.0.0.1"
+listen_addr = "127.0.0.1"
 listen_port = 8899
 
 # 目标服务器地址和端口
-target_host = "api.mainnet-beta.solana.com"
-target_port = 443
+target_addr = "47.109.157.92"
+target_port = 8899
 
 [logging]
 # 日志级别：trace, debug, info, warn, error
@@ -186,7 +186,7 @@ build_all() {
 [proxy]
 listen_addr = "127.0.0.1"   # 本地监听地址
 listen_port = 8899          # 本地监听端口
-target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_addr = "47.109.157.92" # 目标 Solana 节点地址
 target_port = 8899          # 目标 Solana 节点端口
 
 [logging]
@@ -233,7 +233,7 @@ READMEEOF
 [proxy]
 listen_addr = "127.0.0.1"   # 本地监听地址
 listen_port = 8899          # 本地监听端口
-target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_addr = "47.109.157.92" # 目标 Solana 节点地址
 target_port = 8899          # 目标 Solana 节点端口
 
 [logging]
@@ -306,7 +306,7 @@ READMEEOF
 [proxy]
 listen_addr = "127.0.0.1"   # 本地监听地址
 listen_port = 8899          # 本地监听端口
-target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_addr = "47.109.157.92" # 目标 Solana 节点地址
 target_port = 8899          # 目标 Solana 节点端口
 
 [logging]
@@ -335,7 +335,7 @@ READMEEOF
 [proxy]
 listen_addr = "127.0.0.1"   # 本地监听地址
 listen_port = 8899          # 本地监听端口
-target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_addr = "47.109.157.92" # 目标 Solana 节点地址
 target_port = 8899          # 目标 Solana 节点端口
 
 [logging]
@@ -384,7 +384,7 @@ READMEEOF
 [proxy]
 listen_addr = "127.0.0.1"   # 本地监听地址
 listen_port = 8899          # 本地监听端口
-target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_addr = "47.109.157.92" # 目标 Solana 节点地址
 target_port = 8899          # 目标 Solana 节点端口
 
 [logging]
