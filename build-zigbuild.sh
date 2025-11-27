@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 使用 zigbuild 进行跨平台编译（不需要 Docker）
-# 适用于 macOS 编译 Linux 版本
+# 适用于 macOS 编译 Linux 版本 
 
 # 设置颜色输出
 RED='\033[0;31m'
