@@ -6,7 +6,7 @@ listen_addr = "127.0.0.1"
 listen_port = 8899
 
 # Target server address and port
-target_addr = "192.168.18.5"
+target_addr = "47.109.157.92"
 target_port = 8899
 
 [logging]

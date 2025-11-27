@@ -125,12 +125,12 @@ build_all() {
 
     # 自动选择构建方式
     if [ "$build_method" = "auto" ]; then
-        if [ -f "./build-simple.sh" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -f "./build-zigbuild.sh" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+            print_info "检测到 macOS 环境，优先使用 zigbuild 构建（包含 Linux 版本，无需 Docker）"
+            build_method="zigbuild"
+        elif [ -f "./build-simple.sh" ] && [[ "$OSTYPE" == "darwin"* ]]; then
             print_info "检测到 macOS 环境，使用简化构建脚本"
             build_method="simple"
-        elif [ -f "./build-zigbuild.sh" ] && [[ "$OSTYPE" == "darwin"* ]]; then
-            print_info "检测到 macOS 环境，优先使用 zigbuild 构建（无需 Docker）"
-            build_method="zigbuild"
         elif [ -f "./build.sh" ]; then
             build_method="traditional"
         else
@@ -259,59 +259,150 @@ READMEEOF
             ;;
         zigbuild)
             if [ -f "./build-zigbuild.sh" ]; then
-                print_info "使用 zigbuild 构建（推荐，无需 Docker）..."
+                print_info "使用 zigbuild 构建（包含所有平台：macOS、Linux、Windows）..."
                 ./build-zigbuild.sh
 
                 # 检查 config.toml 是否存在
                 if [ ! -f "config.toml" ]; then
-                    print_warning "未找到 config.toml 文件，将创建默认配置"
-                    create_default_config
+                    print_warning "未找到 config.toml 文件，将使用默认配置"
                 fi
 
-                # 将 release 目录的文件重新打包，加入 config.toml
+                # 准备发布目录
                 mkdir -p dist
                 if [ -d "release" ]; then
-                    print_info "重新打包，加入 config.toml..."
+                    print_info "准备发布文件，加入 config.toml 和 README..."
 
-                    # 处理每个压缩包
+                    # 处理 tar.gz 文件（macOS 和 Linux）
                     for archive in release/*.tar.gz; do
                         if [ -f "$archive" ]; then
                             basename=$(basename "$archive" .tar.gz)
-                            # 解压原文件
-                            tar -xzf "$archive" -C release/
                             # 创建临时目录
-                            mkdir -p "release/tmp_${basename}"
-                            # 移动文件到临时目录并添加 config.toml
-                            mv "release/${basename%-*}" "release/tmp_${basename}/" 2>/dev/null || \
-                            mv release/solana-localhost* "release/tmp_${basename}/" 2>/dev/null
-                            cp config.toml "release/tmp_${basename}/"
+                            mkdir -p "dist/tmp_${basename}"
+                            # 解压
+                            tar -xzf "$archive" -C "dist/tmp_${basename}"
+                            # 添加配置文件
+                            cp config.toml "dist/tmp_${basename}/config.toml"
+
+                            # 根据平台创建对应的 README
+                            if [[ "$basename" == *"linux"* ]]; then
+                                cat > "dist/tmp_${basename}/README.md" << 'READMEEOF'
+# Solana Localhost Proxy
+
+## 快速开始
+
+1. 编辑 `config.toml` 配置文件
+2. 运行程序:
+   ```bash
+   ./solana-localhost-linux-x64  # Linux x64
+   # 或
+   ./solana-localhost-linux-arm64 # Linux ARM64
+   ```
+
+## 配置说明
+
+编辑 `config.toml`:
+
+```toml
+[proxy]
+listen_addr = "127.0.0.1"   # 本地监听地址
+listen_port = 8899          # 本地监听端口
+target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_port = 8899          # 目标 Solana 节点端口
+
+[logging]
+level = "info"  # 日志级别: trace, debug, info, warn, error
+```
+READMEEOF
+                            else
+                                cat > "dist/tmp_${basename}/README.md" << 'READMEEOF'
+# Solana Localhost Proxy
+
+## 快速开始
+
+1. 编辑 `config.toml` 配置文件
+2. 运行程序:
+   ```bash
+   ./solana-localhost-macos-x64  # macOS Intel
+   # 或
+   ./solana-localhost-macos-arm64 # macOS Apple Silicon
+   ```
+
+## 配置说明
+
+编辑 `config.toml`:
+
+```toml
+[proxy]
+listen_addr = "127.0.0.1"   # 本地监听地址
+listen_port = 8899          # 本地监听端口
+target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_port = 8899          # 目标 Solana 节点端口
+
+[logging]
+level = "info"  # 日志级别: trace, debug, info, warn, error
+```
+READMEEOF
+                            fi
+
                             # 重新打包
-                            cd release
-                            tar -czf "../dist/${basename}.tar.gz" -C "tmp_${basename}" .
-                            cd ..
-                            # 清理临时文件
-                            rm -rf "release/tmp_${basename}"
+                            cd "dist/tmp_${basename}"
+                            tar -czf "../${basename}.tar.gz" .
+                            cd ../..
+                            # 清理
+                            rm -rf "dist/tmp_${basename}"
+                            print_success "打包: ${basename}.tar.gz"
                         fi
                     done
 
+                    # 处理 zip 文件（Windows）
                     for archive in release/*.zip; do
                         if [ -f "$archive" ]; then
                             basename=$(basename "$archive" .zip)
-                            # 解压原文件
-                            unzip -q "$archive" -d "release/tmp_${basename}"
-                            # 添加 config.toml
-                            cp config.toml "release/tmp_${basename}/"
+                            # 创建临时目录
+                            mkdir -p "dist/tmp_${basename}"
+                            # 解压
+                            unzip -q "$archive" -d "dist/tmp_${basename}"
+                            # 添加配置文件
+                            cp config.toml "dist/tmp_${basename}/config.toml"
+                            # 创建 README
+                            cat > "dist/tmp_${basename}/README.md" << 'READMEEOF'
+# Solana Localhost Proxy
+
+## 快速开始
+
+1. 编辑 `config.toml` 配置文件
+2. 运行程序:
+   ```
+   solana-localhost-windows-x64.exe
+   ```
+
+## 配置说明
+
+编辑 `config.toml`:
+
+```toml
+[proxy]
+listen_addr = "127.0.0.1"   # 本地监听地址
+listen_port = 8899          # 本地监听端口
+target_addr = "192.168.18.5" # 目标 Solana 节点地址
+target_port = 8899          # 目标 Solana 节点端口
+
+[logging]
+level = "info"  # 日志级别: trace, debug, info, warn, error
+```
+READMEEOF
                             # 重新打包
-                            cd "release/tmp_${basename}"
-                            zip -q "../../dist/${basename}.zip" *
+                            cd "dist/tmp_${basename}"
+                            zip -q "../${basename}.zip" *
                             cd ../..
-                            # 清理临时文件
-                            rm -rf "release/tmp_${basename}"
+                            # 清理
+                            rm -rf "dist/tmp_${basename}"
+                            print_success "打包: ${basename}.zip"
                         fi
                     done
                 fi
 
-                print_success "zigbuild 构建完成（已包含 config.toml）"
+                print_success "zigbuild 构建完成（包含所有平台和配置文件）"
             else
                 print_error "未找到 build-zigbuild.sh 脚本"
                 exit 1
