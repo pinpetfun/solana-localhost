@@ -1,0 +1,22 @@
+# Lima VM configuration for testing Linux binaries
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+
+cpus: 2
+memory: "2GiB"
+disk: "10GiB"
+
+mounts:
+  - location: "/Users/ybeetle/code/solana-localhost"
+    writable: true
+
+containerd:
+  system: false
+  user: false
+
+provision:
+  - mode: system
+    script: |
+      apt-get update
+      apt-get install -y qemu-user-static

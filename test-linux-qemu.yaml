@@ -1,0 +1,27 @@
+# Lima VM configuration for testing Linux binaries with QEMU
+vmType: "qemu"  # 明确指定使用 QEMU 而不是 VZ
+
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+
+cpus: 2
+memory: "2GiB"
+disk: "10GiB"
+
+mounts:
+  - location: "/Users/ybeetle/code/solana-localhost"
+    writable: true
+
+containerd:
+  system: false
+  user: false
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      apt-get update
+      apt-get install -y qemu-user-static
+      # 注册 binfmt_misc 以支持透明执行 ARM64 二进制
+      update-binfmts --enable qemu-aarch64

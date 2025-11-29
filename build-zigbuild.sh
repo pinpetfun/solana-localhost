@@ -103,11 +103,8 @@ check_zigbuild
 # macOS 本地编译（不需要 zigbuild）
 echo -e "\n${BLUE}=== macOS 版本 ===${NC}"
 build_target "x86_64-apple-darwin" "${PROJECT_NAME}-macos-x64" "false"
-
-# 如果是 Apple Silicon Mac，也编译 ARM64 版本
-if [[ $(uname -m) == "arm64" ]]; then
-    build_target "aarch64-apple-darwin" "${PROJECT_NAME}-macos-arm64" "false"
-fi
+# 始终编译 macOS ARM64 版本（支持 Apple Silicon）
+build_target "aarch64-apple-darwin" "${PROJECT_NAME}-macos-arm64" "false"
 
 # Linux 版本（使用 zigbuild）
 echo -e "\n${BLUE}=== Linux 版本 (使用 zigbuild) ===${NC}"

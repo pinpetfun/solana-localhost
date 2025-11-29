@@ -466,15 +466,15 @@ $CHANGELOG
 ## 📦 下载说明
 
 ### macOS
-- Intel: \`solana-localhost-x86_64-apple-darwin.tar.gz\`
-- Apple Silicon: \`solana-localhost-aarch64-apple-darwin.tar.gz\`
+- Intel (x64): \`solana-localhost-macos-x64.tar.gz\`
+- Apple Silicon (ARM64): \`solana-localhost-macos-arm64.tar.gz\`
 
 ### Linux
-- x86_64: \`solana-localhost-x86_64-unknown-linux-gnu.tar.gz\`
-- ARM64: \`solana-localhost-aarch64-unknown-linux-gnu.tar.gz\`
+- x64: \`solana-localhost-linux-x64.tar.gz\`
+- ARM64: \`solana-localhost-linux-arm64.tar.gz\`
 
 ### Windows
-- x86_64: \`solana-localhost-x86_64-pc-windows-msvc.zip\`
+- x64: \`solana-localhost-windows-x64.zip\`
 
 ### 使用方法
 \`\`\`bash
