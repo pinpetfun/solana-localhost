@@ -35,18 +35,16 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ macOS x64 版本构建成功${NC}"
 fi
 
-# macOS ARM64 (如果是 M1/M2 Mac)
-if [[ $(uname -m) == "arm64" ]]; then
-    echo -e "\n${YELLOW}构建 macOS ARM64 版本...${NC}"
-    rustup target add aarch64-apple-darwin 2>/dev/null
-    cargo build --release --target aarch64-apple-darwin
-    if [ $? -eq 0 ]; then
-        cp "target/aarch64-apple-darwin/release/${PROJECT_NAME}" "$RELEASE_DIR/${PROJECT_NAME}-macos-arm64"
-        cd "$RELEASE_DIR"
-        tar czf "${PROJECT_NAME}-macos-arm64.tar.gz" "${PROJECT_NAME}-macos-arm64"
-        cd ..
-        echo -e "${GREEN}✓ macOS ARM64 版本构建成功${NC}"
-    fi
+# macOS ARM64 (Apple Silicon)
+echo -e "\n${YELLOW}构建 macOS ARM64 版本...${NC}"
+rustup target add aarch64-apple-darwin 2>/dev/null
+cargo build --release --target aarch64-apple-darwin
+if [ $? -eq 0 ]; then
+    cp "target/aarch64-apple-darwin/release/${PROJECT_NAME}" "$RELEASE_DIR/${PROJECT_NAME}-macos-arm64"
+    cd "$RELEASE_DIR"
+    tar czf "${PROJECT_NAME}-macos-arm64.tar.gz" "${PROJECT_NAME}-macos-arm64"
+    cd ..
+    echo -e "${GREEN}✓ macOS ARM64 版本构建成功${NC}"
 fi
 
 # Windows x64
