@@ -87,7 +87,7 @@ When the program starts, it will display:
 ```
 2025-11-26T10:00:00.000Z  INFO solana_localhost: Starting HTTP proxy server
 2025-11-26T10:00:00.001Z  INFO solana_localhost: Listening on: 127.0.0.1:8899
-2025-11-26T10:00:00.002Z  INFO solana_localhost: Forwarding to: http://47.109.157.92:8899
+2025-11-26T10:00:00.002Z  INFO solana_localhost: Forwarding to: http://162.250.124.66:8899
 2025-11-26T10:00:00.003Z  INFO solana_localhost: Server started successfully
 ```
 

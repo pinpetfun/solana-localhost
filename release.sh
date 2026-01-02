@@ -459,11 +459,11 @@ create_release() {
     fi
 
     # 创建 release notes
-    NOTES="## 📋 更新内容
+    NOTES="## 📋 What's Changed
 
 $CHANGELOG
 
-## 📦 下载说明
+## 📦 Download Instructions
 
 ### macOS
 - Intel (x64): \`solana-localhost-macos-x64.tar.gz\`
@@ -476,12 +476,12 @@ $CHANGELOG
 ### Windows
 - x64: \`solana-localhost-windows-x64.zip\`
 
-### 使用方法
+### Usage
 \`\`\`bash
-# 解压 (macOS/Linux)
+# Extract (macOS/Linux)
 tar -xzf solana-localhost-*.tar.gz
 
-# 运行
+# Run
 ./solana-localhost
 \`\`\`"
 
