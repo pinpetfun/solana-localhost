@@ -21,3 +21,5 @@ Cargo.lock
 .DS_Store
 Thumbs.db
 /release
+
+/notes
