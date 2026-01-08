@@ -53,7 +53,7 @@ impl Config {
                     name: String::from("solana-rpc"),
                     listen_addr: String::from("127.0.0.1"),
                     listen_port: 8899,
-                    target_addr: String::from("47.109.157.92"),
+                    target_addr: String::from("162.250.124.66"),
                     target_port: 8899,
                     enable_websocket: false,
                 },
@@ -61,7 +61,7 @@ impl Config {
                     name: String::from("solana-ws"),
                     listen_addr: String::from("127.0.0.1"),
                     listen_port: 8900,
-                    target_addr: String::from("47.109.157.92"),
+                    target_addr: String::from("162.250.124.66"),
                     target_port: 8900,
                     enable_websocket: true,
                 },
@@ -69,7 +69,7 @@ impl Config {
                     name: String::from("service-3000"),
                     listen_addr: String::from("127.0.0.1"),
                     listen_port: 3000,
-                    target_addr: String::from("47.109.157.92"),
+                    target_addr: String::from("162.250.124.66"),
                     target_port: 3000,
                     enable_websocket: false,
                 },
@@ -96,9 +96,9 @@ impl Config {
             }
             Err(_) => {
                 println!("Config file {} not found. Using default configuration:", path);
-                println!("  RPC: 127.0.0.1:8899 -> 47.109.157.92:8899");
-                println!("  WebSocket: 127.0.0.1:8900 -> 47.109.157.92:8900");
-                println!("  Service: 127.0.0.1:3000 -> 47.109.157.92:3000");
+                println!("  RPC: 127.0.0.1:8899 -> 162.250.124.66:8899");
+                println!("  WebSocket: 127.0.0.1:8900 -> 162.250.124.66:8900");
+                println!("  Service: 127.0.0.1:3000 -> 162.250.124.66:3000");
                 Self::default()
             }
         }
